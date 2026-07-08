@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { Chunk } from './Chunk.js';
 import { CHUNK_SIZE, CHUNK_HEIGHT, RENDER_DISTANCE_PC, RENDER_DISTANCE_MOBILE } from '../utils/constants.js';
-import { BlockType } from '../blocks/BlockTypes.js';
 import { generateCOZEWall } from '../worldgen/COZEWall.js';
 
 /**
