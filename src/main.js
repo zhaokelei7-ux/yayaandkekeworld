@@ -16,6 +16,7 @@ if (!checkWebGL()) {
 import * as THREE from 'three';
 import { getBlockTextures, BlockType } from './blocks/BlockTypes.js';
 import { generateChunkTerrain } from './worldgen/TerrainGen.js';
+import { World } from './core/World.js';
 
 const tex = getBlockTextures(BlockType.GRASS);
 console.assert(tex !== null, '纹理生成失败');
@@ -40,11 +41,9 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.getElementById('app').appendChild(renderer.domElement);
 
-// 占位旋转方块
-const geo = new THREE.BoxGeometry(1, 1, 1);
-const mat = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });
-const cube = new THREE.Mesh(geo, mat);
-scene.add(cube);
+// 世界管理器
+const world = new World(scene);
+world.update({ x: 0, y: 5, z: 0 });
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 1);
 dirLight.position.set(10, 20, 10);
@@ -60,8 +59,6 @@ window.addEventListener('resize', () => {
 
 function animate() {
   requestAnimationFrame(animate);
-  cube.rotation.x += 0.01;
-  cube.rotation.y += 0.02;
   renderer.render(scene, camera);
 }
 animate();
