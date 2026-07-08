@@ -15,9 +15,16 @@ if (!checkWebGL()) {
 
 import * as THREE from 'three';
 import { getBlockTextures, BlockType } from './blocks/BlockTypes.js';
+import { generateChunkTerrain } from './worldgen/TerrainGen.js';
 
 const tex = getBlockTextures(BlockType.GRASS);
 console.assert(tex !== null, '纹理生成失败');
+
+// 地形生成验证
+const data = generateChunkTerrain(0, 0);
+const idx = (8 * 64 + 5) * 16 + 8; // x=8, y=5, z=8 位置
+console.assert(data[idx] > 0, '中心地形应为实体方块');
+console.log('地形生成测试通过');
 
 /** @type {THREE.Scene} */
 const scene = new THREE.Scene();
