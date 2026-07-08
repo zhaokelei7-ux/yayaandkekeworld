@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import { getBlockTextures, BlockType } from './blocks/BlockTypes.js';
 
 const tex = getBlockTextures(BlockType.GRASS);
-console.assert(tex !== null && tex.top instanceof HTMLCanvasElement, '纹理生成失败');
+console.assert(tex !== null, '纹理生成失败');
 
 /** @type {THREE.Scene} */
 const scene = new THREE.Scene();

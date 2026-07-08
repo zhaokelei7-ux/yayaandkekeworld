@@ -160,5 +160,25 @@ export function getBlockName(blockType) {
   return def ? def.name : '未知';
 }
 
+/**
+ * 获取方块纹理 (别名，兼容 getTexture 接口)
+ * @param {number} blockType
+ * @returns {{ top: THREE.CanvasTexture, side: THREE.CanvasTexture, bottom: THREE.CanvasTexture } | null}
+ */
+export function getTexture(blockType) {
+  return getBlockTextures(blockType);
+}
+
+/**
+ * 获取方块属性
+ * @param {number} blockType
+ * @returns {{ name: string, solid: boolean } | null}
+ */
+export function getBlockProperties(blockType) {
+  if (blockType === BlockType.AIR || !BLOCK_DEFS[blockType]) return null;
+  const def = BLOCK_DEFS[blockType];
+  return { name: def.name, solid: def.solid };
+}
+
 /** 所有可用的方块类型列表（用于 UI 切换） */
 export const BLOCK_TYPES = [BlockType.GRASS, BlockType.DIRT, BlockType.STONE, BlockType.SAND, BlockType.COZE_RED, BlockType.COZE_WHITE];
