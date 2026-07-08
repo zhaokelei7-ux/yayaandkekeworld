@@ -71,7 +71,7 @@ export class Chunk {
     // 超出本区块边界 — 视为可见（由相邻区块处理或边界可见）
     if (nx < 0 || nx >= CHUNK_SIZE || ny < 0 || ny >= CHUNK_HEIGHT || nz < 0 || nz >= CHUNK_SIZE) return true;
     const neighborType = this.getBlock(nx, ny, nz);
-    return neighborType === BlockType.AIR || neighborType === -1;
+    return neighborType === -1 || !isBlockSolid(neighborType);
   }
 
   /**
@@ -81,7 +81,6 @@ export class Chunk {
   build(neighborChunks) {
     this.dispose();
 
-    const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
     // 按材质分组，同一材质的方块面合并到一个 Mesh
     /** @type {Map<number, {positions: number[], normals: number[], uvs: number[], indices: number[]}>} */
     const groups = new Map();
@@ -147,7 +146,6 @@ export class Chunk {
       this.mesh.add(mesh);
     }
 
-    geometry.dispose();
   }
 
   /** 加载到场景 */
@@ -177,6 +175,7 @@ export class Chunk {
       }
       this.mesh.remove(child);
     }
+    this.loaded = false;
   }
 }
 
