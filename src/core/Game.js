@@ -3,6 +3,7 @@ import { World } from './World.js';
 import { Player } from '../player/Player.js';
 import { Controls } from '../player/Controls.js';
 import { Interaction } from '../interaction/Interaction.js';
+import { HUD } from '../ui/HUD.js';
 
 /**
  * 游戏主控制器 — 协调所有子系统
@@ -39,6 +40,7 @@ export class Game {
     this.player = new Player();
     this.controls = new Controls(this.camera, this.renderer.domElement);
     this.interaction = new Interaction();
+    this.hud = new HUD();
 
     // 窗口自适应
     window.addEventListener('resize', () => this._onResize());
@@ -105,5 +107,8 @@ export class Game {
 
     // 7. 渲染
     this.renderer.render(this.scene, this.camera);
+
+    // 8. 更新 HUD
+    this.hud.update(this.player);
   }
 }
