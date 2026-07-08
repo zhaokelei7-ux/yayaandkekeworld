@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Chunk } from './Chunk.js';
 import { CHUNK_SIZE, CHUNK_HEIGHT, RENDER_DISTANCE_PC, RENDER_DISTANCE_MOBILE } from '../utils/constants.js';
 import { BlockType } from '../blocks/BlockTypes.js';
+import { generateCOZEWall } from '../worldgen/COZEWall.js';
 
 /**
  * 世界管理器 — 管理所有区块的生命周期
@@ -16,6 +17,8 @@ export class World {
     this.lastChunkX = null;
     this.lastChunkZ = null;
     this.renderDistance = window.innerWidth < 768 ? RENDER_DISTANCE_MOBILE : RENDER_DISTANCE_PC;
+    /** @type {boolean} */
+    this.cozeWallPlaced = false;
   }
 
   /**
@@ -74,6 +77,12 @@ export class World {
       chunk.dispose();
       this.chunks.delete(key);
     }
+
+    // 首次加载完成后放置 COZE 墙
+    if (!this.cozeWallPlaced && this.chunks.size > 0) {
+      this._placeCOZEWall();
+      this.cozeWallPlaced = true;
+    }
   }
 
   /**
@@ -126,6 +135,34 @@ export class World {
     const chunk = this.chunks.get(key);
     if (chunk) {
       chunk.build();
+    }
+  }
+
+  /**
+   * 将 COZE 文字墙写入已加载的区块
+   */
+  _placeCOZEWall() {
+    const wallBlocks = generateCOZEWall();
+    // 收集需要重建的区块 key
+    const rebuildSet = new Set();
+
+    for (const { x, y, z, type } of wallBlocks) {
+      const cx = Math.floor(x / CHUNK_SIZE);
+      const cz = Math.floor(z / CHUNK_SIZE);
+      const key = World.chunkKey(cx, cz);
+      const chunk = this.chunks.get(key);
+      if (!chunk) continue;
+
+      const lx = ((x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+      const lz = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+      chunk.setBlock(lx, y, lz, type);
+      rebuildSet.add(key);
+    }
+
+    // 重建受影响的区块网格
+    for (const key of rebuildSet) {
+      const chunk = this.chunks.get(key);
+      if (chunk) chunk.build();
     }
   }
 
