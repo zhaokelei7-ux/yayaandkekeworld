@@ -58,6 +58,14 @@ export class Interaction {
   }
 
   /**
+   * 清除待处理的点击（用于指针锁定后跳帧）
+   */
+  clearPendingClicks() {
+    this._leftClickPending = false;
+    this._rightClickPending = false;
+  }
+
+  /**
    * 执行交互检测
    * @param {THREE.PerspectiveCamera} camera
    * @param {import('../core/World.js').World} world

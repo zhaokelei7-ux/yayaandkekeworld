@@ -77,6 +77,15 @@ export class Game {
     // 1. 更新控制 → 获取输入
     const input = this.controls.update(dt);
 
+    // 刚锁定指针时跳过交互点击（锁定点击不应触发放置/破坏）
+    if (this.controls.consumeJustLocked()) {
+      this.interaction.clearPendingClicks();
+    }
+
+    // 1.5 同步视角旋转 (Controls → Player)
+    this.player.yaw = this.controls.yaw;
+    this.player.pitch = this.controls.pitch;
+
     // 2. 更新玩家 (含物理)
     this.player.update(dt, input, this.world);
 

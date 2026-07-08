@@ -29,6 +29,8 @@ export class Controls {
     this.lastTouchY = 0;
     this._touchMoveX = 0;
     this._touchMoveZ = 0;
+    /** @type {boolean} - 刚锁定指针，下帧应跳过交互 */
+    this._justLocked = false;
 
     this._bindEvents();
   }
@@ -37,6 +39,7 @@ export class Controls {
     // Pointer Lock
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement === this.domElement;
+      if (this.isLocked) this._justLocked = true;
     });
 
     // 鼠标移动
@@ -140,6 +143,16 @@ export class Controls {
     const jump = this.keys.space;
 
     return { moveX: mx, moveZ: mz, jump };
+  }
+
+  /**
+   * 消费"刚锁定指针"标记（Interaction 跳过一次点击）
+   * @returns {boolean}
+   */
+  consumeJustLocked() {
+    const v = this._justLocked;
+    this._justLocked = false;
+    return v;
   }
 
   /**
