@@ -4,6 +4,7 @@ import { Player } from '../player/Player.js';
 import { Controls } from '../player/Controls.js';
 import { Interaction } from '../interaction/Interaction.js';
 import { HUD } from '../ui/HUD.js';
+import { TouchControls } from '../ui/TouchControls.js';
 
 /**
  * 游戏主控制器 — 协调所有子系统
@@ -41,6 +42,7 @@ export class Game {
     this.controls = new Controls(this.camera, this.renderer.domElement);
     this.interaction = new Interaction();
     this.hud = new HUD();
+    this.touchControls = new TouchControls(this.controls);
 
     // 窗口自适应
     window.addEventListener('resize', () => this._onResize());
