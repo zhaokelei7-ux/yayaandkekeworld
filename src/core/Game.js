@@ -44,6 +44,15 @@ export class Game {
     this.hud = new HUD();
     this.touchControls = new TouchControls(this.controls);
 
+    // 隐藏加载画面
+    const loading = document.getElementById('loading-screen');
+    if (loading) loading.classList.add('hidden');
+
+    // 移动端降低渲染距离
+    if (window.innerWidth < 768) {
+      this.world.renderDistance = 4;
+    }
+
     // 窗口自适应
     window.addEventListener('resize', () => this._onResize());
 
@@ -62,6 +71,8 @@ export class Game {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    // 动态调整渲染距离
+    this.world.renderDistance = w < 768 ? 4 : 6;
   }
 
   start() {

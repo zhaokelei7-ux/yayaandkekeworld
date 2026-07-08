@@ -16,10 +16,48 @@
       align-items: center; justify-content: center; text-align: center; padding: 2rem;
     }
     .no-webgl #no-webgl { display: flex; }
+
+    /* 竖屏提示 */
+    @media (orientation: portrait) and (max-width: 768px) {
+      #rotate-hint { display: flex !important; }
+    }
+
+    #rotate-hint {
+      display: none;
+      position: fixed; inset: 0; z-index: 9998;
+      background: #1a1a2e; color: white;
+      flex-direction: column; align-items: center; justify-content: center;
+      font-size: 1.2rem; text-align: center; padding: 2rem;
+    }
+
+    #loading-screen {
+      position: fixed; inset: 0; z-index: 9997;
+      background: #1a1a2e; color: white;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 1.5rem; font-family: 'Segoe UI', sans-serif;
+      transition: opacity 0.5s;
+    }
+
+    #loading-screen .sub {
+      font-size: 0.9rem; color: #888; margin-top: 1rem;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0; pointer-events: none;
+    }
   </style>
 </head>
 <body>
   <div id="no-webgl">您的浏览器不支持 WebGL，请使用现代浏览器访问。</div>
+  <div id="rotate-hint">
+    <div style="font-size: 4rem; margin-bottom: 2rem;">🔄</div>
+    <div>请横屏使用以获得最佳体验</div>
+  </div>
+  <div id="loading-screen">
+    <div>⛏️ coze-craft</div>
+    <div class="sub">正在生成方块世界...</div>
+  </div>
   <div id="app"></div>
   <script type="module" src="/src/main.js"></script>
 </body>
