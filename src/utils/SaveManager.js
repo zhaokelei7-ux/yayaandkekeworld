@@ -63,11 +63,44 @@ export class SaveManager {
   }
 
   /**
+   * 保存玩家位置和视角
+   * @param {{ x: number, y: number, z: number }} pos
+   * @param {number} yaw
+   * @param {number} pitch
+   * @param {number} selectedBlock
+   */
+  static savePlayerState(pos, yaw, pitch, selectedBlock) {
+    try {
+      localStorage.setItem(STORAGE_KEY + '_player', JSON.stringify({
+        x: pos.x, y: pos.y, z: pos.z,
+        yaw, pitch,
+        selectedBlock: selectedBlock || 0,
+      }));
+    } catch (e) {
+      console.warn('⚠️ 无法保存玩家位置');
+    }
+  }
+
+  /**
+   * 读取玩家存档
+   * @returns {{ x: number, y: number, z: number, yaw: number, pitch: number, selectedBlock: number } | null}
+   */
+  static loadPlayerState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY + '_player');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * 清空所有存档（重新开始）
    */
   static clearAll() {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY + '_player');
     } catch {
       // ignore
     }

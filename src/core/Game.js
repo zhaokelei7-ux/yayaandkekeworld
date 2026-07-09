@@ -6,6 +6,7 @@ import { Interaction } from '../interaction/Interaction.js';
 import { HUD } from '../ui/HUD.js';
 import { TouchControls } from '../ui/TouchControls.js';
 import { Sky } from '../worldgen/Sky.js';
+import { SaveManager } from '../utils/SaveManager.js';
 
 /**
  * 游戏主控制器 — 协调所有子系统
@@ -60,13 +61,23 @@ export class Game {
     // 窗口自适应
     window.addEventListener('resize', () => this._onResize());
 
-    // 可见性变化暂停
+    // 可见性变化暂停 / 保存
     document.addEventListener('visibilitychange', () => {
       this._paused = document.hidden;
+      if (document.hidden) {
+        this._savePlayerState();
+      }
+    });
+
+    // 页面关闭/刷新前保存
+    window.addEventListener('beforeunload', () => {
+      this._savePlayerState();
     });
 
     this._lastTime = performance.now();
     this._paused = false;
+    this._playerPosRestored = false;
+    this._lastSaveTime = 0;
   }
 
   _onResize() {
@@ -77,6 +88,17 @@ export class Game {
     this.renderer.setSize(w, h);
     // 动态调整渲染距离
     this.world.renderDistance = w < 768 ? 4 : 6;
+  }
+
+  _savePlayerState() {
+    if (this._playerPosRestored) {
+      SaveManager.savePlayerState(
+        this.player.position,
+        this.player.yaw,
+        this.player.pitch,
+        this.player.selectedBlockIndex,
+      );
+    }
   }
 
   start() {
@@ -108,8 +130,35 @@ export class Game {
     // 2. 先更新世界（加载区块），确保物理系统有地面可检测
     this.world.update(this.player.position);
 
+    // 2.5 世界就绪后恢复玩家位置（仅第一次）
+    if (this.world._saveReady && !this._playerPosRestored) {
+      console.log('📦 世界已就绪，恢复玩家位置');
+      const saved = SaveManager.loadPlayerState();
+      if (saved) {
+        this.player.position.x = saved.x;
+        this.player.position.y = saved.y;
+        this.player.position.z = saved.z;
+        this.player.yaw = saved.yaw;
+        this.player.pitch = saved.pitch;
+        this.player.selectedBlockIndex = saved.selectedBlock || 0;
+        // 同步给 Controls，避免下一帧被覆盖回 0
+        this.controls.yaw = saved.yaw;
+        this.controls.pitch = saved.pitch;
+        console.log(`💾 已恢复玩家位置 (${saved.x.toFixed(1)}, ${saved.y.toFixed(1)}, ${saved.z.toFixed(1)})`);
+      } else {
+        console.log('📭 无玩家存档，使用默认出生点');
+      }
+      this._playerPosRestored = true;
+    }
+
     // 3. 再更新玩家 (含物理 → 碰撞需要已加载的区块)
     this.player.update(dt, input, this.world);
+
+    // 3.5 定期保存玩家位置（每 3 秒）
+    if (this._playerPosRestored && now - this._lastSaveTime > 3000) {
+      this._savePlayerState();
+      this._lastSaveTime = now;
+    }
 
     // 4. 更新交互
     this.interaction.update(this.camera, this.world, this.player);
