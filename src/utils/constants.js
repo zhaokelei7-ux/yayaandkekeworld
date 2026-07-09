@@ -1,5 +1,5 @@
 /**
- * coze-craft 全局常量
+ * yayaandkekeworld 全局常量
  * @module constants
  */
 
@@ -7,6 +7,8 @@
 export const GRAVITY = 9.8;
 /** 玩家移动速度 (方块/秒) */
 export const PLAYER_SPEED = 4.0;
+/** 玩家冲刺速度 (方块/秒) */
+export const PLAYER_SPRINT_SPEED = 7.0;
 /** 跳跃初速度 (方块/秒) */
 export const JUMP_SPEED = 5.0;
 /** 交互最大距离 (方块) */
@@ -35,6 +37,9 @@ export const PLATFORM_Y = 5;
 
 /** 方块尺寸 */
 export const BLOCK_SIZE = 1;
+
+/** 世界边界半径 (从原点出发，超出后不能移动) */
+export const WORLD_BOUNDARY = 48;
 
 /** 纹理像素大小 */
 export const TEXTURE_SIZE = 16;

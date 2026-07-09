@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { Chunk } from './Chunk.js';
 import { CHUNK_SIZE, CHUNK_HEIGHT, RENDER_DISTANCE_PC, RENDER_DISTANCE_MOBILE } from '../utils/constants.js';
 import { generateCOZEWall } from '../worldgen/COZEWall.js';
+import { generateZhuRen } from '../worldgen/Structures.js';
+import { SaveManager } from '../utils/SaveManager.js';
 
 /**
  * 世界管理器 — 管理所有区块的生命周期
@@ -17,7 +19,9 @@ export class World {
     this.lastChunkZ = null;
     this.renderDistance = window.innerWidth < 768 ? RENDER_DISTANCE_MOBILE : RENDER_DISTANCE_PC;
     /** @type {boolean} */
-    this.cozeWallPlaced = false;
+    this.structuresPlaced = false;
+    /** @type {boolean} 存档系统是否就绪（结构放置后激活） */
+    this._saveReady = false;
   }
 
   /**
@@ -54,6 +58,15 @@ export class World {
         const key = World.chunkKey(ccx, ccz);
         if (!this.chunks.has(key)) {
           const chunk = new Chunk(ccx, ccz, this.scene);
+
+          // 如果存档已启用，检查是否有保存的区块数据
+          if (this._saveReady) {
+            const saved = SaveManager.loadChunk(ccx, ccz);
+            if (saved) {
+              chunk.data = saved;
+            }
+          }
+
           chunk.build();
           chunk.load();
           this.chunks.set(key, chunk);
@@ -77,10 +90,10 @@ export class World {
       this.chunks.delete(key);
     }
 
-    // 首次加载完成后放置 COZE 墙
-    if (!this.cozeWallPlaced && this.chunks.size > 0) {
-      this._placeCOZEWall();
-      this.cozeWallPlaced = true;
+    // 首次加载完成后放置 COZE 墙 + 主人文字
+    if (!this.structuresPlaced && this.chunks.size > 0) {
+      this._placeStructures();
+      this.structuresPlaced = true;
     }
   }
 
@@ -122,6 +135,11 @@ export class World {
     chunk.setBlock(lx, wy, lz, type);
     // 重建区块网格
     chunk.build();
+
+    // 存档：保存被修改的区块
+    if (this._saveReady) {
+      SaveManager.saveChunk(cx, cz, chunk.data);
+    }
   }
 
   /**
@@ -138,14 +156,54 @@ export class World {
   }
 
   /**
-   * 将 COZE 文字墙写入已加载的区块
+   * 将 COZE 文字墙 + 主人粉色文字写入已加载的区块
    */
-  _placeCOZEWall() {
+  _placeStructures() {
+    // ——— LOVE 文字墙 ———
     const wallBlocks = generateCOZEWall();
-    // 收集需要重建的区块 key
     const rebuildSet = new Set();
+    this._writeBlocks(wallBlocks, rebuildSet);
 
-    for (const { x, y, z, type } of wallBlocks) {
+    // ——— "主人" 粉色文字 ———
+    const nameBlocks = generateZhuRen();
+    this._writeBlocks(nameBlocks, rebuildSet);
+
+    // 重建受影响的区块网格
+    for (const key of rebuildSet) {
+      const chunk = this.chunks.get(key);
+      if (chunk) chunk.build();
+    }
+
+    // 激活存档系统：应用之前保存的玩家修改
+    this._initSave();
+  }
+
+  /**
+   * 初始化存档系统 — 将已保存的区块数据覆盖到当前加载的区块上
+   */
+  _initSave() {
+    this._saveReady = true;
+    let loadedCount = 0;
+    for (const [, chunk] of this.chunks) {
+      const saved = SaveManager.loadChunk(chunk.cx, chunk.cz);
+      if (saved) {
+        chunk.data = saved;
+        chunk.build();
+        loadedCount++;
+      }
+    }
+    if (loadedCount > 0) {
+      console.log(`💾 已恢复 ${loadedCount} 个区块的建造`);
+    }
+  }
+
+  /**
+   * 将方块列表写入区块
+   * @param {{ x: number, y: number, z: number, type: number }[]} blockList
+   * @param {Set<string>} rebuildSet
+   */
+  _writeBlocks(blockList, rebuildSet) {
+    for (const { x, y, z, type } of blockList) {
       const cx = Math.floor(x / CHUNK_SIZE);
       const cz = Math.floor(z / CHUNK_SIZE);
       const key = World.chunkKey(cx, cz);
@@ -156,12 +214,6 @@ export class World {
       const lz = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
       chunk.setBlock(lx, y, lz, type);
       rebuildSet.add(key);
-    }
-
-    // 重建受影响的区块网格
-    for (const key of rebuildSet) {
-      const chunk = this.chunks.get(key);
-      if (chunk) chunk.build();
     }
   }
 

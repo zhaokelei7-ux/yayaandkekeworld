@@ -5,6 +5,7 @@ import { Controls } from '../player/Controls.js';
 import { Interaction } from '../interaction/Interaction.js';
 import { HUD } from '../ui/HUD.js';
 import { TouchControls } from '../ui/TouchControls.js';
+import { Sky } from '../worldgen/Sky.js';
 
 /**
  * 游戏主控制器 — 协调所有子系统
@@ -13,7 +14,7 @@ export class Game {
   constructor() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87CEEB);
-    this.scene.fog = new THREE.Fog(0x87CEEB, 80, 150); // 雾效优化
+    this.scene.fog = new THREE.Fog(0x87CEEB, 30, 60); // 雾效配合世界边界
 
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
     this.camera.position.set(0, 1.6, 0);
@@ -43,6 +44,9 @@ export class Game {
     this.interaction = new Interaction();
     this.hud = new HUD();
     this.touchControls = new TouchControls(this.controls);
+
+    // 天空装饰（太阳 + 云朵）
+    this.sky = new Sky(this.scene);
 
     // 隐藏加载画面
     const loading = document.getElementById('loading-screen');
@@ -101,11 +105,11 @@ export class Game {
     this.player.yaw = this.controls.yaw;
     this.player.pitch = this.controls.pitch;
 
-    // 2. 更新玩家 (含物理)
-    this.player.update(dt, input, this.world);
-
-    // 3. 更新世界区块
+    // 2. 先更新世界（加载区块），确保物理系统有地面可检测
     this.world.update(this.player.position);
+
+    // 3. 再更新玩家 (含物理 → 碰撞需要已加载的区块)
+    this.player.update(dt, input, this.world);
 
     // 4. 更新交互
     this.interaction.update(this.camera, this.world, this.player);

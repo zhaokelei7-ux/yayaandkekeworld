@@ -12,9 +12,8 @@ export class Physics {
    * @param {import('../core/World.js').World} world
    */
   static update(dt, player, world) {
-    // 应用重力
+    // 应用重力（当 grounded 时碰撞检测会阻止穿模）
     player.velocity.y -= GRAVITY * dt;
-    // 限制最大下落速度
     if (player.velocity.y < -30) player.velocity.y = -30;
 
     // 三轴分别移动 + 碰撞检测
@@ -29,9 +28,13 @@ export class Physics {
     player.position.y += player.velocity.y * dt;
     if (Physics.checkCollision(player, world)) {
       if (player.velocity.y < 0) {
+        // 下落 → 踩到方块表面，snap 到方块顶部消除抖动
         player.grounded = true;
+        player.position.y = Math.floor(player.position.y) + 1;
+      } else {
+        // 上升 → 撞到天花板，回退
+        player.position.y -= player.velocity.y * dt;
       }
-      player.position.y -= player.velocity.y * dt;
       player.velocity.y = 0;
     }
 

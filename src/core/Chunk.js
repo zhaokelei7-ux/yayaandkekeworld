@@ -74,15 +74,16 @@ export class Chunk {
     return neighborType === -1 || !isBlockSolid(neighborType);
   }
 
-  /**
+    /**
    * 构建区块网格（仅可见面）
-   * @param {Map<string, Chunk>} [neighborChunks] - 相邻区块用于边界面判断
+   * 按面方向分三组：顶/底/侧，分别使用对应纹理
+   * @param {Map<string, Chunk>} [neighborChunks]
    */
   build(neighborChunks) {
     this.dispose();
 
-    // 按材质分组，同一材质的方块面合并到一个 Mesh
-    /** @type {Map<number, {positions: number[], normals: number[], uvs: number[], indices: number[]}>} */
+    // 按"类型-面方向"分组：key = `${type}-${faceDir}` (faceDir = 'top'|'bottom'|'side')
+    /** @type {Map<string, {positions: number[], normals: number[], uvs: number[], indices: number[]}>} */
     const groups = new Map();
 
     for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -91,15 +92,19 @@ export class Chunk {
           const type = this.getBlock(x, y, z);
           if (type === BlockType.AIR || type === -1) continue;
 
-          if (!groups.has(type)) {
-            groups.set(type, { positions: [], normals: [], uvs: [], indices: [] });
-          }
-          const group = groups.get(type);
-
           // 检查 6 个面
           const faces = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
           for (const face of faces) {
             if (!this.isFaceVisible(x, y, z, face)) continue;
+
+            // 根据面方向决定纹理组
+            const faceDir = face === 'py' ? 'top' : face === 'ny' ? 'bottom' : 'side';
+            const groupKey = `${type}-${faceDir}`;
+
+            if (!groups.has(groupKey)) {
+              groups.set(groupKey, { positions: [], normals: [], uvs: [], indices: [] });
+            }
+            const group = groups.get(groupKey);
 
             // 生成本方块该面的 4 个顶点（2 个三角形）
             const verts = getFaceVertices(x, y, z, face);
@@ -120,8 +125,8 @@ export class Chunk {
       }
     }
 
-    // 为每个材质类型创建 Mesh
-    for (const [type, g] of groups) {
+    // 为每个 (类型-面方向) 组创建 Mesh
+    for (const [groupKey, g] of groups) {
       if (g.positions.length === 0) continue;
 
       const geo = new THREE.BufferGeometry();
@@ -130,18 +135,17 @@ export class Chunk {
       geo.setAttribute('uv', new THREE.Float32BufferAttribute(g.uvs, 2));
       geo.setIndex(g.indices);
 
-      const textures = getBlockTextures(type);
+      // 从 groupKey 解析出 blockType 和 faceDir
+      const [typeStr, faceDir] = groupKey.split('-');
+      const textures = getBlockTextures(Number(typeStr));
       if (!textures) continue;
 
-      // 使用 MultiMaterial 或简单的 MeshLambertMaterial 纹理
-      // 简单起见，对侧面使用 side 纹理
-      // 但合并网格中不好区分面方向，所以用统一的 side 材质（草地顶面会有差异，可接受）
       const material = new THREE.MeshLambertMaterial({
-        map: textures.side,
+        map: textures[faceDir],
       });
 
       const mesh = new THREE.Mesh(geo, material);
-      mesh.userData.blockType = type;
+      mesh.userData.blockType = Number(typeStr);
       mesh.userData.isChunkMesh = true;
       this.mesh.add(mesh);
     }
@@ -194,18 +198,18 @@ function getFaceVertices(x, y, z, face) {
   const cx = x + 0.5, cy = y + 0.5, cz = z + 0.5;
   // 偏移到方块中心
   const verts = {
-    // 顶面 (py)
-    'py': [-s, s, -s,  s, s, -s,  s, s, s,  -s, s, s],
-    // 底面 (ny)
-    'ny': [-s, -s, s,  s, -s, s,  s, -s, -s,  -s, -s, -s],
+    // 顶面 (py) — 从 +Y 看向原点，CCW 绕序
+    'py': [-s, s, s,  s, s, s,  s, s, -s,  -s, s, -s],
+    // 底面 (ny) — 从 -Y 看向原点，CCW 绕序
+    'ny': [-s, -s, -s,  s, -s, -s,  s, -s, s,  -s, -s, s],
     // 正面 (pz)
     'pz': [-s, -s, s,  s, -s, s,  s, s, s,  -s, s, s],
     // 背面 (nz)
     'nz': [s, -s, -s,  -s, -s, -s,  -s, s, -s,  s, s, -s],
-    // 右面 (px)
-    'px': [s, -s, -s,  s, -s, s,  s, s, s,  s, s, -s],
-    // 左面 (nx)
-    'nx': [-s, -s, s,  -s, -s, -s,  -s, s, -s,  -s, s, s],
+    // 右面 (px) — 从 +X 看向原点，CCW 绕序
+    'px': [s, s, -s,  s, s, s,  s, -s, s,  s, -s, -s],
+    // 左面 (nx) — 从 -X 看向原点，CCW 绕序
+    'nx': [-s, s, s,  -s, s, -s,  -s, -s, -s,  -s, -s, s],
   };
   const v = verts[face];
   return [
@@ -228,5 +232,8 @@ function getFaceNormal(face) {
 
 /** @returns {number[]} UV 坐标 [u0,v0, u1,v1, u2,v2, u3,v3] */
 function getFaceUV(face) {
+  // pz/nz 面：V0/V1 在底部（y=-s），V2/V3 在顶部（y=s）
+  // 需要 V2/V3 得到 v=0（绿色条纹），V0/V1 得到 v=1（棕色）
+  if (face === 'pz' || face === 'nz') return [0,1, 1,1, 1,0, 0,0];
   return [0,0, 1,0, 1,1, 0,1];
 }

@@ -6,14 +6,15 @@ import { PLATFORM_RADIUS, PLATFORM_Y } from '../utils/constants.js';
  * 每个字母是 5 列 x 7 行，从左到右、从下到上
  */
 const LETTERS = {
-  'C': [
+  // All matrices: row 0 = bottom of visual letter = lowest Y
+  'L': [
     [1,1,1,1,1],
     [1,0,0,0,0],
     [1,0,0,0,0],
     [1,0,0,0,0],
     [1,0,0,0,0],
     [1,0,0,0,0],
-    [1,1,1,1,1],
+    [1,0,0,0,0],
   ],
   'O': [
     [1,1,1,1,1],
@@ -24,14 +25,14 @@ const LETTERS = {
     [1,0,0,0,1],
     [1,1,1,1,1],
   ],
-  'Z': [
-    [1,1,1,1,1],
-    [0,0,0,0,1],
-    [0,0,0,1,0],
+  'V': [
     [0,0,1,0,0],
-    [0,1,0,0,0],
-    [1,0,0,0,0],
-    [1,1,1,1,1],
+    [0,1,0,1,0],
+    [0,1,0,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
   ],
   'E': [
     [1,1,1,1,1],
@@ -49,7 +50,7 @@ const LETTER_WIDTH = 5;
 const LETTER_HEIGHT = 7;
 
 /**
- * 生成 COZE 文字墙的方块坐标
+ * 生成 LOVE 文字墙的方块坐标
  * 墙位于沙质平台 Z 负方向边缘，玩家从原点面对 -Z 方向即可看到
  * @returns {{ x: number, y: number, z: number, type: number }[]}
  */
@@ -63,9 +64,9 @@ export function generateCOZEWall() {
   // Z 位置：沙质平台边缘再往前一格（-Z 方向）
   const wallZ = -(PLATFORM_RADIUS + 2);
   // 起始 Y：从沙质平台高度起
-  const startY = PLATFORM_Y;
+  const startY = PLATFORM_Y + 22; // 上移 2 格
 
-  const letters = ['C', 'O', 'Z', 'E'];
+  const letters = ['L', 'O', 'V', 'E'];
   let currentX = startX;
 
   for (const char of letters) {

@@ -19,6 +19,8 @@ export class Interaction {
     this._mouseDown = { left: false, right: false };
     this._leftClickPending = false;
     this._rightClickPending = false;
+    this._pendingBlockSelect = null;
+    this._pendingWheelDelta = 0;
 
     this._bindEvents();
   }
@@ -34,6 +36,9 @@ export class Interaction {
     document.addEventListener('wheel', (e) => {
       if (document.pointerLockElement) {
         e.preventDefault();
+        // 每次滚轮事件切换一格，精确不跳
+        if (e.deltaY > 0) this._pendingWheelDelta++;
+        else if (e.deltaY < 0) this._pendingWheelDelta--;
       }
     }, { passive: false });
 
@@ -128,7 +133,14 @@ export class Interaction {
    * @param {import('../player/Player.js').Player} player
    */
   update(camera, world, player) {
-    // 处理方块选择切换
+    // 处理滚轮选择（基于玩家当前索引的相对偏移）
+    if (this._pendingWheelDelta !== 0) {
+      const n = BLOCK_TYPES.length;
+      player.selectedBlockIndex = ((player.selectedBlockIndex + this._pendingWheelDelta) % n + n) % n;
+      this._pendingWheelDelta = 0;
+    }
+
+    // 处理数字键方块选择切换
     const selectIdx = this.consumeBlockSelect();
     if (selectIdx !== null && selectIdx < BLOCK_TYPES.length) {
       player.selectedBlockIndex = selectIdx;

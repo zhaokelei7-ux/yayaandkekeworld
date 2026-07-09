@@ -14,6 +14,7 @@ export const BlockType = {
   SAND: 4,
   COZE_RED: 5,
   COZE_WHITE: 6,
+  PINK: 7,
 };
 
 /**
@@ -64,6 +65,13 @@ const BLOCK_DEFS = {
     sideColor: '#ECEFF1',
     bottomColor: '#ECEFF1',
   },
+  [BlockType.PINK]: {
+    name: '粉色',
+    solid: true,
+    topColor: '#F06292',
+    sideColor: '#F06292',
+    bottomColor: '#F06292',
+  },
 };
 
 /**
@@ -94,16 +102,16 @@ function createBlockTexture(topColor, sideColor, bottomColor, topStripColor) {
         ctx.strokeRect(x, y, pixelSize, pixelSize);
       }
     }
-    // 草地特定：顶部绿色条
+    // 草地特定：顶部绿色条（画在 Canvas 底部，因 flipY 后映射到面的顶部）
     if (strips) {
       ctx.fillStyle = strips;
-      ctx.fillRect(0, 0, size, 4);
+      ctx.fillRect(0, size - 4, size, 4);
     }
     return canvas;
   };
 
   return {
-    top: makeCanvas(topColor, topStripColor),
+    top: makeCanvas(topColor, null),
     side: makeCanvas(sideColor, topStripColor || null),
     bottom: makeCanvas(bottomColor),
   };
@@ -181,4 +189,4 @@ export function getBlockProperties(blockType) {
 }
 
 /** 所有可用的方块类型列表（用于 UI 切换） */
-export const BLOCK_TYPES = [BlockType.GRASS, BlockType.DIRT, BlockType.STONE, BlockType.SAND, BlockType.COZE_RED, BlockType.COZE_WHITE];
+export const BLOCK_TYPES = [BlockType.GRASS, BlockType.DIRT, BlockType.STONE, BlockType.SAND, BlockType.COZE_RED, BlockType.COZE_WHITE, BlockType.PINK];

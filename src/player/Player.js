@@ -1,4 +1,4 @@
-import { PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_DEPTH, EYE_HEIGHT, PLAYER_SPEED, JUMP_SPEED } from '../utils/constants.js';
+import { PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_DEPTH, EYE_HEIGHT, PLAYER_SPEED, PLAYER_SPRINT_SPEED, JUMP_SPEED, WORLD_BOUNDARY } from '../utils/constants.js';
 import { Physics } from '../physics/Physics.js';
 
 /**
@@ -7,7 +7,7 @@ import { Physics } from '../physics/Physics.js';
 export class Player {
   constructor() {
     /** 世界坐标位置 (脚底) */
-    this.position = { x: 0, y: 5, z: 0 };
+    this.position = { x: 0, y: 7, z: 0 };
     /** 速度向量 */
     this.velocity = { x: 0, y: 0, z: 0 };
     /** 是否在地面 */
@@ -32,12 +32,12 @@ export class Player {
     // 计算移动方向 (基于偏航角)
     const sin = Math.sin(this.yaw);
     const cos = Math.cos(this.yaw);
-    const forwardX = -sin;
-    const forwardZ = -cos;
+    const forwardX = sin;
+    const forwardZ = cos;
     const rightX = cos;
     const rightZ = -sin;
 
-    const speed = PLAYER_SPEED;
+    const speed = input.sprint ? PLAYER_SPRINT_SPEED : PLAYER_SPEED;
     let moveX = (rightX * input.moveX + forwardX * input.moveZ) * speed;
     let moveZ = (rightZ * input.moveX + forwardZ * input.moveZ) * speed;
 
@@ -52,6 +52,16 @@ export class Player {
 
     // 物理更新
     Physics.update(dt, this, world);
+
+    // 世界边界限制 — 水平距离不能超过 WORLD_BOUNDARY
+    const dist = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
+    if (dist > WORLD_BOUNDARY) {
+      const ratio = WORLD_BOUNDARY / dist;
+      this.position.x *= ratio;
+      this.position.z *= ratio;
+      this.velocity.x = 0;
+      this.velocity.z = 0;
+    }
   }
 
   /**
