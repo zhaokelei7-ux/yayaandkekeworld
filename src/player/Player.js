@@ -1,4 +1,4 @@
-import { PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_DEPTH, EYE_HEIGHT, PLAYER_SPEED, PLAYER_SPRINT_SPEED, JUMP_SPEED, WORLD_BOUNDARY } from '../utils/constants.js';
+import { PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_DEPTH, EYE_HEIGHT, PLAYER_SPEED, PLAYER_SPRINT_SPEED, JUMP_SPEED } from '../utils/constants.js';
 import { Physics } from '../physics/Physics.js';
 
 /**
@@ -52,16 +52,6 @@ export class Player {
 
     // 物理更新
     Physics.update(dt, this, world);
-
-    // 世界边界限制 — 水平距离不能超过 WORLD_BOUNDARY
-    const dist = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
-    if (dist > WORLD_BOUNDARY) {
-      const ratio = WORLD_BOUNDARY / dist;
-      this.position.x *= ratio;
-      this.position.z *= ratio;
-      this.velocity.x = 0;
-      this.velocity.z = 0;
-    }
   }
 
   /**

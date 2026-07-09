@@ -15,7 +15,7 @@ export class Game {
   constructor() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87CEEB);
-    this.scene.fog = new THREE.Fog(0x87CEEB, 30, 60); // 雾效配合世界边界
+    this.scene.fog = new THREE.Fog(0x87CEEB, 80, 160); // 雾效（无限世界，雾推远一些）
 
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
     this.camera.position.set(0, 1.6, 0);
