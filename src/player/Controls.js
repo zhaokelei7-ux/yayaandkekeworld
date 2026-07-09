@@ -25,7 +25,7 @@ export class Controls {
     this._pendingPitch = 0;
 
     // 输入状态
-    this.keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
+    this.keys = { w: false, a: false, s: false, d: false, space: false, shift: false, control: false };
     this.input = { moveX: 0, moveZ: 0, jump: false };
 
     // 触控状态
@@ -64,7 +64,7 @@ export class Controls {
       this._pendingPitch -= e.movementY * MOUSE_SENSITIVITY;
     });
 
-    // 键盘
+    // 键盘（使用捕获阶段优先拦截，防止浏览器默认行为）
     document.addEventListener('keydown', (e) => this._onKey(e, true));
     document.addEventListener('keyup', (e) => this._onKey(e, false));
 
@@ -136,20 +136,14 @@ export class Controls {
    */
   update(dt) {
     // === 视角旋转：帧累积 + 硬速度上限 + 抗帧时间尖峰 ===
-    // 1. 有效 dt 上限 50ms，防止 GC / Chunk 加载造成的帧时间尖峰导致视角突变
-    // 2. 未消费完的盈余带至下一帧（非丢弃），避免高速移动时输入丢失导致的瞬间停顿
-    // 3. 盈余设软上限（约 2 帧），防止鼠标停止后视角持续漂移
     const MAX_LOOK_SPEED = Math.PI * 2; // 弧度/秒 (360°/s)
     const pitchLimit = Math.PI / 2 - 0.01;
     const MAX_FRAME_TIME = 0.05; // 最大有效帧时间 50ms（>20fps 不受影响）
 
-    // 限制有效 dt，防止 GC / Chunk 加载造成的帧时间尖峰导致视角突变
     const maxDelta = MAX_LOOK_SPEED * Math.min(dt, MAX_FRAME_TIME);
-
-    // 最多允许约 2 帧的盈余带到下一帧，防止鼠标停止后视角漂移
     const maxPending = maxDelta * 2;
 
-    // Yaw — 消费最多 maxDelta，超出部分带至下一帧（非丢弃）
+    // Yaw — 消费最多 maxDelta，超出部分带至下一帧
     const yawDelta = Math.max(-maxDelta, Math.min(maxDelta, this._pendingYaw));
     this.yaw += yawDelta;
     this._pendingYaw = Math.max(-maxPending, Math.min(maxPending, this._pendingYaw - yawDelta));
@@ -181,7 +175,8 @@ export class Controls {
 
     const jump = this.keys.space;
 
-    return { moveX: mx, moveZ: mz, jump, sprint: this.keys.shift };
+    // Shift：地面模式=加速跑，飞行模式=下降（避免 Ctrl 冲突）
+    return { moveX: mx, moveZ: mz, jump, sprint: this.keys.shift, descend: this.keys.shift };
   }
 
   /**

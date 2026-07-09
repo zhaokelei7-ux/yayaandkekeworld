@@ -7,6 +7,7 @@ import { HUD } from '../ui/HUD.js';
 import { TouchControls } from '../ui/TouchControls.js';
 import { Sky } from '../worldgen/Sky.js';
 import { SaveManager } from '../utils/SaveManager.js';
+import { showConfirmModal } from '../utils/Modal.js';
 
 /**
  * 游戏主控制器 — 协调所有子系统
@@ -15,9 +16,9 @@ export class Game {
   constructor() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87CEEB);
-    this.scene.fog = new THREE.Fog(0x87CEEB, 80, 160); // 雾效（无限世界，雾推远一些）
+    this.scene.fog = new THREE.Fog(0x87CEEB, 80, 300);
 
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
     this.camera.position.set(0, 1.6, 0);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -46,8 +47,8 @@ export class Game {
     this.hud = new HUD();
     this.touchControls = new TouchControls(this.controls);
 
-    // 天空装饰（太阳 + 云朵）
-    this.sky = new Sky(this.scene);
+    // 天空系统（昼夜循环、太阳、月亮）
+    this.sky = new Sky(this.scene, { dirLight, ambLight });
 
     // 隐藏加载画面
     const loading = document.getElementById('loading-screen');
@@ -74,10 +75,90 @@ export class Game {
       this._savePlayerState();
     });
 
+    // R 键切换飞行模式（仅在游戏中生效）
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'r' && document.pointerLockElement) {
+        this.player.flying = !this.player.flying;
+        if (!this.player.flying) {
+          this.player.velocity.y = 0;
+        }
+      }
+    });
+
+    // ESC 释放指针锁定 → 回到开始界面
+    document.addEventListener('pointerlockchange', () => {
+      if (!document.pointerLockElement && this._gameStarted) {
+        this._paused = true;
+        this._showStartScreen();
+      }
+    });
+
     this._lastTime = performance.now();
     this._paused = false;
     this._playerPosRestored = false;
     this._lastSaveTime = 0;
+    this._gameStarted = false;
+
+    // 初始化开始界面
+    this._showStartScreen();
+  }
+
+  /**
+   * 显示开始界面（支持多次调用）
+   */
+  _showStartScreen() {
+    const startScreen = document.getElementById('start-screen');
+    if (!startScreen) return;
+    startScreen.classList.remove('hidden');
+
+    const btnContinue = document.getElementById('btn-continue');
+    const btnRestart = document.getElementById('btn-restart');
+    if (!btnContinue || !btnRestart) return;
+
+    // 更新按钮文字和颜色
+    if (this._gameStarted) {
+      btnContinue.textContent = '▶ 继续玩';
+      btnContinue.style.background = 'linear-gradient(135deg, #f8a4c8, #f48fb1)';
+    } else {
+      btnContinue.textContent = '▶ 开始新游戏';
+      btnContinue.style.background = 'linear-gradient(135deg, #ff6b9d, #d6336c)';
+    }
+    btnContinue.style.opacity = '1';
+
+    // 克隆替换以移除旧监听器
+    const newContinue = btnContinue.cloneNode(true);
+    const newRestart = btnRestart.cloneNode(true);
+    btnContinue.parentNode.replaceChild(newContinue, btnContinue);
+    btnRestart.parentNode.replaceChild(newRestart, btnRestart);
+
+    newContinue.addEventListener('click', () => {
+      startScreen.classList.add('hidden');
+      if (this._gameStarted) {
+        this._paused = false;
+        if (!this._isMobile()) {
+          this.renderer.domElement.requestPointerLock();
+        }
+      } else {
+        this.start();
+      }
+    });
+
+    newRestart.addEventListener('click', async () => {
+      const confirmed = await showConfirmModal(
+        '所有建造的方块和进度都会被清除，世界将回到最初的起点...',
+        '————— 确认重置 —————'
+      );
+      if (confirmed) {
+        startScreen.classList.add('hidden');
+        window.__yayaRestarting = true;
+        SaveManager.clearAll();
+        location.reload();
+      }
+    });
+  }
+
+  _isMobile() {
+    return window.innerWidth < 768 || 'ontouchstart' in window;
   }
 
   _onResize() {
@@ -86,11 +167,11 @@ export class Game {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
-    // 动态调整渲染距离
     this.world.renderDistance = w < 768 ? 4 : 6;
   }
 
   _savePlayerState() {
+    if (window.__yayaRestarting) return;
     if (this._playerPosRestored) {
       SaveManager.savePlayerState(
         this.player.position,
@@ -102,6 +183,7 @@ export class Game {
   }
 
   start() {
+    this._gameStarted = true;
     this._lastTime = performance.now();
     this._loop();
   }
@@ -112,27 +194,29 @@ export class Game {
     if (this._paused) return;
 
     const now = performance.now();
-    const dt = Math.min((now - this._lastTime) / 1000, 0.05); // 限制最大 dt
+    const dt = Math.min((now - this._lastTime) / 1000, 0.05);
     this._lastTime = now;
 
     // 1. 更新控制 → 获取输入
     const input = this.controls.update(dt);
 
-    // 刚锁定指针时跳过交互点击（锁定点击不应触发放置/破坏）
+    // 刚锁定指针时跳过交互点击
     if (this.controls.consumeJustLocked()) {
       this.interaction.clearPendingClicks();
     }
 
-    // 1.5 同步视角旋转 (Controls → Player)
+    // 1.5 同步视角旋转
     this.player.yaw = this.controls.yaw;
     this.player.pitch = this.controls.pitch;
 
-    // 2. 先更新世界（加载区块），确保物理系统有地面可检测
+    // 1.8 更新天空（昼夜循环）
+    this.sky.update(dt);
+
+    // 2. 先更新世界（加载区块）
     this.world.update(this.player.position);
 
     // 2.5 世界就绪后恢复玩家位置（仅第一次）
     if (this.world._saveReady && !this._playerPosRestored) {
-      console.log('📦 世界已就绪，恢复玩家位置');
       const saved = SaveManager.loadPlayerState();
       if (saved) {
         this.player.position.x = saved.x;
@@ -141,17 +225,13 @@ export class Game {
         this.player.yaw = saved.yaw;
         this.player.pitch = saved.pitch;
         this.player.selectedBlockIndex = saved.selectedBlock || 0;
-        // 同步给 Controls，避免下一帧被覆盖回 0
         this.controls.yaw = saved.yaw;
         this.controls.pitch = saved.pitch;
-        console.log(`💾 已恢复玩家位置 (${saved.x.toFixed(1)}, ${saved.y.toFixed(1)}, ${saved.z.toFixed(1)})`);
-      } else {
-        console.log('📭 无玩家存档，使用默认出生点');
       }
       this._playerPosRestored = true;
     }
 
-    // 3. 再更新玩家 (含物理 → 碰撞需要已加载的区块)
+    // 3. 更新玩家
     this.player.update(dt, input, this.world);
 
     // 3.5 定期保存玩家位置（每 3 秒）
@@ -167,7 +247,7 @@ export class Game {
     const camPos = this.player.getCameraPosition();
     this.camera.position.set(camPos.x, camPos.y, camPos.z);
 
-    // 6. 应用视角旋转 (yaw/pitch)
+    // 6. 应用视角旋转
     const euler = new THREE.Euler(this.player.pitch, this.player.yaw, 0, 'YXZ');
     this.camera.quaternion.setFromEuler(euler);
 

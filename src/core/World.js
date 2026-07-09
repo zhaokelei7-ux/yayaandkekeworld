@@ -6,6 +6,23 @@ import { generateZhuRen } from '../worldgen/Structures.js';
 import { SaveManager } from '../utils/SaveManager.js';
 
 /**
+ * 预计算所有结构体方块，按区块 key 分组
+ * 用于在区块加载时自动还原，不限距离
+ */
+const STRUCTURE_BLOCKS = (() => {
+  const map = new Map();
+  const all = [...generateCOZEWall(), ...generateZhuRen()];
+  for (const { x, y, z, type } of all) {
+    const cx = Math.floor(x / CHUNK_SIZE);
+    const cz = Math.floor(z / CHUNK_SIZE);
+    const key = `${cx},${cz}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push({ x, y, z, type, cx, cz });
+  }
+  return map;
+})();
+
+/**
  * 世界管理器 — 管理所有区块的生命周期
  */
 export class World {
@@ -59,7 +76,10 @@ export class World {
         if (!this.chunks.has(key)) {
           const chunk = new Chunk(ccx, ccz, this.scene);
 
-          // 如果存档已启用，检查是否有保存的区块数据
+          // 应用结构体方块（LOVE墙、主人文字、爱心等）
+          this._applyStructures(chunk, ccx, ccz);
+
+          // 如果存档已启用，检查是否有保存的区块数据（玩家改动优先于结构体）
           if (this._saveReady) {
             const saved = SaveManager.loadChunk(ccx, ccz);
             if (saved) {
@@ -90,9 +110,9 @@ export class World {
       this.chunks.delete(key);
     }
 
-    // 首次加载完成后放置 COZE 墙 + 主人文字
     if (!this.structuresPlaced && this.chunks.size > 0) {
-      this._placeStructures();
+      // 激活存档系统：为已加载的区块读取玩家存档
+      this._initSave();
       this.structuresPlaced = true;
     }
   }
@@ -156,26 +176,19 @@ export class World {
   }
 
   /**
-   * 将 COZE 文字墙 + 主人粉色文字写入已加载的区块
+   * 将预计算的结构体方块写入指定区块（在区块加载时调用）
+   * @param {Chunk} chunk
+   * @param {number} cx
+   * @param {number} cz
    */
-  _placeStructures() {
-    // ——— LOVE 文字墙 ———
-    const wallBlocks = generateCOZEWall();
-    const rebuildSet = new Set();
-    this._writeBlocks(wallBlocks, rebuildSet);
-
-    // ——— "主人" 粉色文字 ———
-    const nameBlocks = generateZhuRen();
-    this._writeBlocks(nameBlocks, rebuildSet);
-
-    // 重建受影响的区块网格
-    for (const key of rebuildSet) {
-      const chunk = this.chunks.get(key);
-      if (chunk) chunk.build();
+  _applyStructures(chunk, cx, cz) {
+    const blocks = STRUCTURE_BLOCKS.get(`${cx},${cz}`);
+    if (!blocks) return;
+    for (const { x, y, z, type } of blocks) {
+      const lx = ((x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+      const lz = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+      chunk.setBlock(lx, y, lz, type);
     }
-
-    // 激活存档系统：应用之前保存的玩家修改
-    this._initSave();
   }
 
   /**
@@ -194,26 +207,6 @@ export class World {
     }
     if (loadedCount > 0) {
       console.log(`💾 已恢复 ${loadedCount} 个区块的建造`);
-    }
-  }
-
-  /**
-   * 将方块列表写入区块
-   * @param {{ x: number, y: number, z: number, type: number }[]} blockList
-   * @param {Set<string>} rebuildSet
-   */
-  _writeBlocks(blockList, rebuildSet) {
-    for (const { x, y, z, type } of blockList) {
-      const cx = Math.floor(x / CHUNK_SIZE);
-      const cz = Math.floor(z / CHUNK_SIZE);
-      const key = World.chunkKey(cx, cz);
-      const chunk = this.chunks.get(key);
-      if (!chunk) continue;
-
-      const lx = ((x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-      const lz = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-      chunk.setBlock(lx, y, lz, type);
-      rebuildSet.add(key);
     }
   }
 

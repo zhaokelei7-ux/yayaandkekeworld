@@ -15,6 +15,8 @@ export const BlockType = {
   COZE_RED: 5,
   COZE_WHITE: 6,
   PINK: 7,
+  WOOD: 8,
+  LEAVES: 9,
 };
 
 /**
@@ -71,6 +73,20 @@ const BLOCK_DEFS = {
     topColor: '#F06292',
     sideColor: '#F06292',
     bottomColor: '#F06292',
+  },
+  [BlockType.WOOD]: {
+    name: '木头',
+    solid: true,
+    topColor: '#8D6E63',
+    sideColor: '#6D4C41',
+    bottomColor: '#8D6E63',
+  },
+  [BlockType.LEAVES]: {
+    name: '树叶',
+    solid: true,
+    topColor: '#66BB6A',
+    sideColor: '#43A047',
+    bottomColor: '#66BB6A',
   },
 };
 
@@ -189,4 +205,4 @@ export function getBlockProperties(blockType) {
 }
 
 /** 所有可用的方块类型列表（用于 UI 切换） */
-export const BLOCK_TYPES = [BlockType.GRASS, BlockType.DIRT, BlockType.STONE, BlockType.SAND, BlockType.COZE_RED, BlockType.COZE_WHITE, BlockType.PINK];
+export const BLOCK_TYPES = [BlockType.GRASS, BlockType.DIRT, BlockType.STONE, BlockType.SAND, BlockType.COZE_RED, BlockType.COZE_WHITE, BlockType.PINK, BlockType.WOOD, BlockType.LEAVES];

@@ -1,5 +1,4 @@
 import { BLOCK_TYPES, getBlockName, getBlockTextures } from '../blocks/BlockTypes.js';
-import { SaveManager } from '../utils/SaveManager.js';
 
 /**
  * HUD — 十字准星 + 方块选择器
@@ -69,32 +68,6 @@ export class HUD {
       this.hotbar.appendChild(slot);
       this.slots.push(slot);
     }
-
-    // ——— 重新开始按钮 ———
-    this.restartBtn = document.createElement('button');
-    this.restartBtn.textContent = '🔄 重新开始';
-    this.restartBtn.style.cssText = `
-      position: absolute; top: 16px; right: 16px;
-      pointer-events: auto; cursor: pointer;
-      background: rgba(0,0,0,0.6); color: white;
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 6px; padding: 8px 16px;
-      font-size: 14px; font-family: 'Segoe UI', sans-serif;
-      transition: background 0.2s; z-index: 200;
-    `;
-    this.restartBtn.addEventListener('mouseenter', () => {
-      this.restartBtn.style.background = 'rgba(200,50,50,0.7)';
-    });
-    this.restartBtn.addEventListener('mouseleave', () => {
-      this.restartBtn.style.background = 'rgba(0,0,0,0.6)';
-    });
-    this.restartBtn.addEventListener('click', () => {
-      if (confirm('确定要重新开始吗？\n所有建造的方块都会被清除，世界将恢复初始状态。')) {
-        SaveManager.clearAll();
-        location.reload();
-      }
-    });
-    this.container.appendChild(this.restartBtn);
   }
 
   /**
@@ -110,7 +83,6 @@ export class HUD {
   }
 
   dispose() {
-    this.restartBtn.remove();
     this.container.remove();
   }
 }

@@ -8,7 +8,7 @@ export const GRAVITY = 9.8;
 /** 玩家移动速度 (方块/秒) */
 export const PLAYER_SPEED = 4.0;
 /** 玩家冲刺速度 (方块/秒) */
-export const PLAYER_SPRINT_SPEED = 7.0;
+export const PLAYER_SPRINT_SPEED = 14.0;
 /** 跳跃初速度 (方块/秒) */
 export const JUMP_SPEED = 5.0;
 /** 交互最大距离 (方块) */
